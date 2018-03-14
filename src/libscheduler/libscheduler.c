@@ -12,17 +12,72 @@
 /**
   Stores information making up a job to be scheduled including any statistics.
 
-  You may need to define some global variables or a struct to store your job queue elements. 
+ You may need to define some global variables or a struct to store your job queue elements.
 */
+
+
 typedef struct _job_t
 {
+	int pid;
+	int priority;
+	int arrivalTime;
+	int latencyTime;
+	int runningTime;
+	int remainingTime;
+	int endTime;
+	bool processing;
 
 } job_t;
 
 
+priqueue_t *jobQ;
+
+scheme_t schemeType;
+
+int numOfCores;
+
+job_t** availCores;
+
+int compareFCFS(const void* jobA, const void* jobB){
+	return(((job_t*)jobA)->pid - ((job_t*)jobB)->pid);
+}
+
+int compareSJF(const void* jobA, const void* jobB){
+	if(((job_t*)jobA)->processing){
+		return 1;
+	}
+	else if(((job_t*)jobA)->runningTime == ((job_t*)jobB)->runningTime){
+		return(((job_t*)jobA)->pid - ((job_t*)jobB)->pid);
+	}
+	else{
+		return(((job_t*)jobA)->runningTime - ((job_t*)jobB)->runningTime);
+	}
+}
+
+int comparePSJF(const void* jobA, const void* jobB){
+	return (((job_t*)jobA)->remainingTime - ((job_t*)jobB)->remainingTime);
+}
+
+int comparePRI(const void* jobA, const void* jobB){
+	if(((job_t*)jobA)->processing){
+		return 1;
+	}
+	else{
+		return (((job_t*)jobA)->priority - ((job_t*)jobB)->priority);
+	}
+}
+
+int comparePPRI(const void* jobA, const void* jobB){
+	return (((job_t*)jobA)->priority - ((job_t*)jobB)->priority);
+}
+
+int compareRR(const void* a, const void* b){
+	return 1;
+}
+
 /**
   Initalizes the scheduler.
- 
+
   Assumptions:
     - You may assume this will be the first scheduler function called.
     - You may assume this function will be called once once.
@@ -34,13 +89,40 @@ typedef struct _job_t
 */
 void scheduler_start_up(int cores, scheme_t scheme)
 {
+	numOfCores = cores;
+	availCores = malloc(cores*sizeof(job_t));
+	schemeType = scheme;
+	jobQ = (priqueue_t*)malloc(sizeof(priqueue_t));
 
+	switch(schemeType){
+		case FCFS:
+			priqueue_init(jobQ, compareFCFS);
+			break;
+		case SJF:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		case PSJF:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		case PRI:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		case PPRI:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		case RR:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		default:
+			printf("error");
+		break;
+	}
 }
 
 
 /**
   Called when a new job arrives.
- 
+
   If multiple cores are idle, the job should be assigned to the core with the
   lowest id.
   If the job arriving should be scheduled to run during the next
@@ -55,8 +137,8 @@ void scheduler_start_up(int cores, scheme_t scheme)
   @param running_time the total number of time units this job will run before it will be finished.
   @param priority the priority of the job. (The lower the value, the higher the priority.)
   @return index of core job should be scheduled on
-  @return -1 if no scheduling changes should be made. 
- 
+  @return -1 if no scheduling changes should be made.
+
  */
 int scheduler_new_job(int job_number, int time, int running_time, int priority)
 {
@@ -66,12 +148,12 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 
 /**
   Called when a job has completed execution.
- 
+
   The core_id, job_number and time parameters are provided for convenience. You may be able to calculate the values with your own data structure.
   If any job should be scheduled to run on the core free'd up by the
   finished job, return the job_number of the job that should be scheduled to
   run on core core_id.
- 
+
   @param core_id the zero-based index of the core where the job was located.
   @param job_number a globally unique identification number of the job.
   @param time the current time of the simulator.
@@ -87,13 +169,13 @@ int scheduler_job_finished(int core_id, int job_number, int time)
 /**
   When the scheme is set to RR, called when the quantum timer has expired
   on a core.
- 
+
   If any job should be scheduled to run on the core free'd up by
   the quantum expiration, return the job_number of the job that should be
   scheduled to run on core core_id.
 
   @param core_id the zero-based index of the core where the quantum has expired.
-  @param time the current time of the simulator. 
+  @param time the current time of the simulator.
   @return job_number of the job that should be scheduled on core cord_id
   @return -1 if core should remain idle
  */
@@ -144,7 +226,7 @@ float scheduler_average_response_time()
 
 /**
   Free any memory associated with your scheduler.
- 
+
   Assumptions:
     - This function will be the last function called in your library.
 */
@@ -160,8 +242,8 @@ void scheduler_clean_up()
   makes to your scheduler.
   In our provided output, we have implemented this function to list the jobs in the order they are to be scheduled. Furthermore, we have also listed the current state of the job (either running on a given core or idle). For example, if we have a non-preemptive algorithm and job(id=4) has began running, job(id=2) arrives with a higher priority, and job(id=1) arrives with a lower priority, the output in our sample output will be:
 
-    2(-1) 4(0) 1(-1)  
-  
+    2(-1) 4(0) 1(-1)
+
   This function is not required and will not be graded. You may leave it
   blank if you do not find it useful.
  */
