@@ -1,3 +1,4 @@
+
 /** @file libscheduler.c
  */
 
@@ -12,14 +13,75 @@
 /**
   Stores information making up a job to be scheduled including any statistics.
 
+<<<<<<< HEAD
   You may need to define some global variables or a struct to store your job queue elements.
+||||||| merged common ancestors
+  You may need to define some global variables or a struct to store your job queue elements. 
+=======
+ You may need to define some global variables or a struct to store your job queue elements.
+>>>>>>> 40dc2b1b319de5b0b45580112e450b2b9ea93763
 */
+
+
 typedef struct _job_t
 {
+	int pid;
+	int priority;
+	int arrivalTime;
+	int latencyTime;
+	int runningTime;
+	int remainingTime;
+	int endTime;
+	bool processing;
 
 
 } job_t;
 
+
+priqueue_t *jobQ;
+
+scheme_t schemeType;
+
+int numOfCores;
+
+job_t** availCores;
+
+int compareFCFS(const void* jobA, const void* jobB){
+	return(((job_t*)jobA)->pid - ((job_t*)jobB)->pid);
+}
+
+int compareSJF(const void* jobA, const void* jobB){
+	if(((job_t*)jobA)->processing){
+		return 1;
+	}
+	else if(((job_t*)jobA)->runningTime == ((job_t*)jobB)->runningTime){
+		return(((job_t*)jobA)->pid - ((job_t*)jobB)->pid);
+	}
+	else{
+		return(((job_t*)jobA)->runningTime - ((job_t*)jobB)->runningTime);
+	}
+}
+
+int comparePSJF(const void* jobA, const void* jobB){
+	return (((job_t*)jobA)->remainingTime - ((job_t*)jobB)->remainingTime);
+}
+
+int comparePRI(const void* jobA, const void* jobB){
+	if(((job_t*)jobA)->processing){
+		return 1;
+	}
+	else{
+		return (((job_t*)jobA)->priority - ((job_t*)jobB)->priority);
+	}
+}
+
+int comparePPRI(const void* jobA, const void* jobB){
+	return (((job_t*)jobA)->priority - ((job_t*)jobB)->priority);
+}
+
+int compareRR(const void* a, const void* b){
+	return 1;
+}
 
 /**
   Initalizes the scheduler.
@@ -35,7 +97,34 @@ typedef struct _job_t
 */
 void scheduler_start_up(int cores, scheme_t scheme)
 {
+	numOfCores = cores;
+	availCores = malloc(cores*sizeof(job_t));
+	schemeType = scheme;
+	jobQ = (priqueue_t*)malloc(sizeof(priqueue_t));
 
+	switch(schemeType){
+		case FCFS:
+			priqueue_init(jobQ, compareFCFS);
+			break;
+		case SJF:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		case PSJF:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		case PRI:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		case PPRI:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		case RR:
+			priqueue_init(jobQ, compareSJF);
+			break;
+		default:
+			printf("error");
+		break;
+	}
 }
 
 

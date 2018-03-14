@@ -6,9 +6,9 @@
 #include <stdbool.h>
 
 struct node {
-        void* data;
-        struct node* prev;
-        struct node* next;
+	void* data;
+	struct node* prev;
+	struct node* next;
 };
 
 
@@ -17,10 +17,10 @@ struct node {
 */
 typedef struct _priqueue_t
 {
-        struct node* head;
-        struct node* tail;
-        int size;
-        int (*compare)(const void*, const void*);
+	struct node* head;
+	struct node* tail;
+	int size;
+	int (*compare)(const void*, const void*);
 
 } priqueue_t;
 
