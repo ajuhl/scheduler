@@ -279,6 +279,38 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
  */
 int scheduler_job_finished(int core_id, int job_number, int time)
 {
+	job_t* job_done = availCores_array[core_id]->current_job;
+
+	job_done->endTime = time;
+	job_done->core_id = -1; // done being scheduled
+	job_done->runningTime = (job_done->endTime)-(job_done->arrivalTime); //total time the job ran
+	job_done->last_scheduled = time;
+
+	priqueue_offer(finished_jobs, job_done);//add finished job to finished jobs queue
+
+	//reset core values for newly free core
+	availCores_array[core_id]->current_job=NULL;
+	availCores_array[core_id]->current_job_id=-1;
+
+	//are there any jobs waiting in the jobQ?
+	if(priqueue_peek(jobQ)==NULL) //NO
+	{
+		return -1;
+	}
+	else //YES
+	{
+		job_t* temp = priqueue_poll(jobQ);
+		temp->core_id = core_id;
+		temp->last_scheduled = time; //job is scheduled
+
+		//update core array
+		availCores_array[core_id]->current_job_id = temp->pid;
+		availCores_array[core_id]->current_job = temp;
+		return(temp->pid);
+
+	}
+
+
 	return -1;
 }
 
@@ -298,6 +330,36 @@ int scheduler_job_finished(int core_id, int job_number, int time)
  */
 int scheduler_quantum_expired(int core_id, int time)
 {
+	//check if queue is empty
+	if(priqueue_peek(jobQ)==NULL && availCores_array[core_id]->current_job_id==-1)
+	{
+		return -1;
+	}
+	else if(priqueue_peek(jobQ)==NULL && availCores_array[core_id]->current_job_id!=-1)
+	{
+		return(availCores_array[core_id]->current_job_id);
+	}
+	else
+	{
+		job_t* prev_job = availCores_array[core_id]->current_job;
+		availCores_array[core_id]->current_job = NULL;
+		availCores_array[core_id]->current_job_id = -1;
+
+		prev_job->runningTime = prev_job->runningTime + (time - prev_job->last_scheduled);
+		prev_job->last_scheduled = time;
+
+		priqueue_offer(jobQ,prev_job);
+
+		job_t* next_job = priqueue_poll(jobQ);
+
+		availCores_array[core_id]->current_job = next_job;
+		availCores_array[core_id]->current_job_id = next_job->pid;
+
+		return(next_job->pid);
+	}
+
+
+
 	return -1;
 }
 
@@ -311,7 +373,7 @@ int scheduler_quantum_expired(int core_id, int time)
  */
 float scheduler_average_waiting_time()
 {
-	return 0.0;
+ return(0.0);
 }
 
 
@@ -324,7 +386,22 @@ float scheduler_average_waiting_time()
  */
 float scheduler_average_turnaround_time()
 {
-	return 0.0;
+	int num_jobs = 0;
+	int waiting_times = 0;
+	float avg = 0;
+
+	num_jobs = priqueue_size(finished_jobs); //number of jobs in finished_jobs queue
+	for(int i=0;i<num_jobs;i++)
+	{
+		job_t* temp = priqueue_at(finished_jobs, i); //gets job from finished job queue
+
+		waiting_times = waiting_times + (temp->endTime - temp->arrivalTime);
+
+	}
+
+	avg = (float)waiting_times/(float)num_jobs;
+
+	return avg;
 }
 
 
@@ -387,5 +464,5 @@ void scheduler_clean_up()
  */
 void scheduler_show_queue()
 {
-
+	//OPTIONAL!
 }
