@@ -70,6 +70,9 @@ int comparePRI(const void* jobA, const void* jobB){
 	if(((job_t*)jobA)->processing){
 		return 1;
 	}
+	else if(((job_t*)jobA)->priority == ((job_t*)jobB)->priority){
+                return(((job_t*)jobA)->pid - ((job_t*)jobB)->pid);
+        }
 	else{
 		return (((job_t*)jobA)->priority - ((job_t*)jobB)->priority);
 	}
