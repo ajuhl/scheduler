@@ -31,7 +31,7 @@ typedef struct _job_t
 
 } job_t;
 
-typedef sruct _core_t
+typedef struct _core_t
 {
 	int core_id;
 	int current_job_id;
@@ -199,7 +199,7 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 	}
 
 	//if core is not found, try to preemt one
-	if(schemeType==PPRI  schemeType==PSJF)
+	if(schemeType==PPRI || schemeType==PSJF)
 	{
 		//can preempt
 		//update running time so compaisons can be made for the PJSF scheme
@@ -215,12 +215,14 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 								//ONLY ON MULTICORE SYSTEMS!! if there is only
 								//one core, we don't have other core to check.
 
+
+		job_t* lowest_pri_job = availCores_array[lowest_priority_index]->current_job;
+		job_t* current_job_on_core = availCores_array[0]->current_job;
+
 		for(int i=0;i<numOfCores;i++)
 		{
-			job_t* current_job_on_core = availCores_array[i]->current_job;
-			job_t* lowest_pri_job = availCores_array[lowest_priority_index]->current_job;
-
-			if(0<compareSJF(new_job, current_job_on_core)
+			current_job_on_core = availCores_array[i]->current_job;
+			if(0<compareSJF(new_job, current_job_on_core))
 			{
 				lowest_priority_index=i;
 			}
@@ -228,7 +230,7 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 
 		job_t* curr = availCores_array[lowest_priority_index]->current_job;
 
-		if(0>compareSJF(new_job, current_job_on_core)
+		if(0>compareSJF(new_job, current_job_on_core))
 		{
 			curr->core_id = -1;
 			priqueue_offer(jobQ, curr);
@@ -248,7 +250,7 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 
 		//couln't get scheduled so add to queue
 		priqueue_offer(jobQ, new_job);
-		return(-1)
+		return(-1);
 
 	}
 	else
