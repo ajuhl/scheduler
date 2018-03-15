@@ -1,3 +1,23 @@
+
+=======
+# Change this line before submission
+STUDENTLASTNAMES = Juhl-Cieslak
+PROGNAME = simulator
+
+CC = gcc --std=gnu11
+CFLAGS = -Wall -g
+
+
+=======
+# Change this line before submission
+STUDENTLASTNAMES = Juhl-Cieslak
+PROGNAME = simulator
+
+CC = gcc --std=gnu11
+CFLAGS = -Wall -g
+
+
+>>>>>>> 1b3d9b926f0a69c0e74e67e8277cd0a393db4711
 ####################################################################
 #                           IMPORTANT                              #
 ####################################################################
