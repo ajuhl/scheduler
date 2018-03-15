@@ -11,17 +11,9 @@
 
 
 /**
-  Stores information making up a job to be scheduled including any statistics.
-
-<<<<<<< HEAD
+   Stores information making up a job to be scheduled including any statistics.
   You may need to define some global variables or a struct to store your job queue elements.
-||||||| merged common ancestors
-  You may need to define some global variables or a struct to store your job queue elements. 
-=======
- You may need to define some global variables or a struct to store your job queue elements.
->>>>>>> 40dc2b1b319de5b0b45580112e450b2b9ea93763
-*/
-
+**/
 
 typedef struct _job_t
 {
@@ -33,10 +25,18 @@ typedef struct _job_t
 	int remainingTime;
 	int endTime;
 	bool processing;
+	int core_id;
+	int last_scheduled;
 
 
 } job_t;
 
+typedef sruct _core_t
+{
+	int core_id;
+	int current_job_id;
+	job_t* current_job;
+} core_t;
 
 priqueue_t *jobQ;
 
@@ -44,7 +44,7 @@ scheme_t schemeType;
 
 int numOfCores;
 
-job_t** availCores;
+core_t** availCores_array;
 
 int compareFCFS(const void* jobA, const void* jobB){
 	return(((job_t*)jobA)->pid - ((job_t*)jobB)->pid);
@@ -98,7 +98,17 @@ int compareRR(const void* a, const void* b){
 void scheduler_start_up(int cores, scheme_t scheme)
 {
 	numOfCores = cores;
-	availCores = malloc(cores*sizeof(job_t));
+	availCores_array = malloc(cores*sizeof(job_t));
+
+	for(int i=0;i<numOfCores;i++)
+	{
+		core_t* new = malloc(sizeof(core_t*));//init array of cores
+		new->core_id = i;
+		new -> current_job_id = -1; //-1 if no job on the core
+		new -> current_job = NULL; //no current job yet :)
+		availCores_array[i] = new;
+	}
+
 	schemeType = scheme;
 	jobQ = (priqueue_t*)malloc(sizeof(priqueue_t));
 
@@ -125,6 +135,8 @@ void scheduler_start_up(int cores, scheme_t scheme)
 			printf("error");
 		break;
 	}
+
+
 }
 
 
@@ -150,6 +162,90 @@ void scheduler_start_up(int cores, scheme_t scheme)
  */
 int scheduler_new_job(int job_number, int time, int running_time, int priority)
 {
+
+	//Create new job and initialize values
+	job_t* new_job = malloc(sizeof(job_t));
+	new_job->pid = job_number;
+	new_job->arrivalTime = time;
+	new_job->runningTime = running_time;
+	new_job->priority = priority;
+	new_job->last_scheduled = -1;
+
+	//find core
+	for(int i=0; i<numOfCores; i++)//cycle through core array
+	{
+
+		if( availCores_array[i]->current_job_id == -1) //no current job
+		{
+			//find unused core and schedule a job on it
+			availCores_array[i]->current_job_id = job_number;
+			availCores_array[i]->current_job = new_job;
+			new_job->core_id = i;
+			new_job->latencyTime = -1; //no latency time yet
+
+			return(i);
+		}
+	}
+
+	//if core is not found, try to preemt one
+	if(schemeType==PPRI  schemeType==PSJF)
+	{
+		//can preempt
+		//update running time so compaisons can be made for the PJSF scheme
+		for (int i=0;i<numOfCores;i++)
+		{
+			job_t* current = availCores_array[i]->current_job;
+			current->runningTime = current->runningTime - current->arrivalTime;
+			current->last_scheduled = time;
+		}
+
+		int lowest_priority_index=0; //index of job with the lowest priority so that
+								//its core can be preempted by the new job
+								//ONLY ON MULTICORE SYSTEMS!! if there is only
+								//one core, we don't have other core to check.
+
+		for(int i=0;i<numOfCores;i++)
+		{
+			job_t* current_job_on_core = availCores_array[i]->current_job;
+			job_t* lowest_pri_job = availCores_array[lowest_priority_index]->current_job;
+
+			if(0<compareSJF(new_job, current_job_on_core)
+			{
+				lowest_priority_index=i;
+			}
+		}
+
+		job_t* curr = availCores_array[lowest_priority_index]->current_job;
+
+		if(0>compareSJF(new_job, current_job_on_core)
+		{
+			curr->core_id = -1;
+			priqueue_offer(jobQ, curr);
+			if(curr->arrivalTime == time)
+			{
+				//reset first scheduled time because this job didn't get to run before being kicked off core
+				curr->arrivalTime=-1;
+			}
+
+			availCores_array[lowest_priority_index]->current_job=new_job;
+			new_job->core_id = lowest_priority_index;
+			new_job->last_scheduled=time;
+			new_job->arrivalTime=time;
+			availCores_array[lowest_priority_index]->current_job_id = job_number;
+			return(lowest_priority_index);
+		}
+
+		//couln't get scheduled so add to queue
+		priqueue_offer(jobQ, new_job);
+		return(-1)
+
+	}
+	else
+	{
+		priqueue_offer(jobQ, new_job);
+		return(-1);
+	}
+
 	return -1;
 }
 
