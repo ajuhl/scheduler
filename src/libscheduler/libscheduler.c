@@ -39,6 +39,7 @@ typedef sruct _core_t
 } core_t;
 
 priqueue_t *jobQ;
+priqueue_t *finished_jobs; //queue of jobs that are done
 
 scheme_t schemeType;
 
@@ -85,6 +86,9 @@ int comparePPRI(const void* jobA, const void* jobB){
 int compareRR(const void* a, const void* b){
 	return 1;
 }
+
+
+
 
 /**
   Initalizes the scheduler.
@@ -139,6 +143,10 @@ void scheduler_start_up(int cores, scheme_t scheme)
 		break;
 	}
 
+
+	finished_jobs = malloc(sizeof(priqueue_t));
+	priqueue_init(jobQ, compareSJF);
+	priqueue_init(finished_jobs, compareFCFS);
 
 }
 
@@ -339,7 +347,28 @@ float scheduler_average_response_time()
 */
 void scheduler_clean_up()
 {
+	//all jobs in jobQ have been taken care of, therefore it should already be empty.
+	priqueue_destroy(jobQ);
+	free(jobQ);
 
+	int s = finished_jobs->size;
+
+	for (int i;i<s;i++)
+	{
+		//frees all jobs in the finished jobs queue
+		free(priqueue_poll(finished_jobs));
+	}
+	//destroy empty finsished jobs queue
+	priqueue_destroy(finished_jobs);
+	free(finished_jobs);
+
+
+	//free cores
+	for(int i=0;i<numOfCores;i++)
+	{
+		free(availCores_array[i]);
+	}
+	free(availCores_array);
 }
 
 
