@@ -27,6 +27,7 @@ typedef struct _job_t
 	bool processing;
 	int core_id;
 	int last_scheduled;
+	int first_scheduled;
 
 
 } job_t;
@@ -181,6 +182,7 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 	new_job->runningTime = running_time;
 	new_job->priority = priority;
 	new_job->last_scheduled = -1;
+	new_job->first_scheduled = -1;
 
 	//find core
 	for(int i=0; i<numOfCores; i++)//cycle through core array
@@ -193,6 +195,9 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 			availCores_array[i]->current_job = new_job;
 			new_job->core_id = i;
 			new_job->latencyTime = -1; //no latency time yet
+			new_job->first_scheduled = time;
+			new_job->last_scheduled = time;
+
 
 			return(i);
 		}
@@ -206,7 +211,7 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 		for (int i=0;i<numOfCores;i++)
 		{
 			job_t* current = availCores_array[i]->current_job;
-			current->runningTime = current->runningTime - current->arrivalTime;
+			current->runningTime = current->runningTime - current->last_scheduled;
 			current->last_scheduled = time;
 		}
 
@@ -234,15 +239,16 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 		{
 			curr->core_id = -1;
 			priqueue_offer(jobQ, curr);
-			if(curr->arrivalTime == time)
+			if(curr->first_scheduled == time)
 			{
 				//reset first scheduled time because this job didn't get to run before being kicked off core
-				curr->arrivalTime=-1;
+				curr->first_scheduled=-1;
 			}
 
 			availCores_array[lowest_priority_index]->current_job=new_job;
 			new_job->core_id = lowest_priority_index;
 			new_job->last_scheduled=time;
+			new_job->first_scheduled=time;
 			new_job->arrivalTime=time;
 			availCores_array[lowest_priority_index]->current_job_id = job_number;
 			return(lowest_priority_index);
@@ -306,6 +312,11 @@ int scheduler_job_finished(int core_id, int job_number, int time)
 		//update core array
 		availCores_array[core_id]->current_job_id = temp->pid;
 		availCores_array[core_id]->current_job = temp;
+
+		if(temp->first_scheduled == -1)
+		{
+			temp->first_scheduled=time;
+		}
 		return(temp->pid);
 
 	}
@@ -355,6 +366,11 @@ int scheduler_quantum_expired(int core_id, int time)
 		availCores_array[core_id]->current_job = next_job;
 		availCores_array[core_id]->current_job_id = next_job->pid;
 
+		if(next_job->first_scheduled==-1)
+		{
+			next_job->first_scheduled=time;
+		}
+
 		return(next_job->pid);
 	}
 
@@ -373,7 +389,22 @@ int scheduler_quantum_expired(int core_id, int time)
  */
 float scheduler_average_waiting_time()
 {
- return(0.0);
+	int num_jobs = 0;
+	int waiting_times = 0;
+	float avg = 0;
+
+	num_jobs = priqueue_size(finished_jobs); //number of jobs in finished_jobs queue
+	for(int i=0;i<num_jobs;i++)
+	{
+		job_t* temp = priqueue_at(finished_jobs, i); //gets job from finished job queue
+
+		waiting_times = waiting_times + (temp->endTime - temp->arrivalTime - temp->runningTime);
+
+	}
+
+	avg = (float)waiting_times/(float)num_jobs;
+
+	return avg;
 }
 
 
@@ -414,7 +445,22 @@ float scheduler_average_turnaround_time()
  */
 float scheduler_average_response_time()
 {
-	return 0.0;
+	int num_jobs = 0;
+	int waiting_times = 0;
+	float avg = 0;
+
+	num_jobs = priqueue_size(finished_jobs); //number of jobs in finished_jobs queue
+	for(int i=0;i<num_jobs;i++)
+	{
+		job_t* temp = priqueue_at(finished_jobs, i); //gets job from finished job queue
+
+		waiting_times = waiting_times + (temp->first_scheduled - temp->arrivalTime);
+
+	}
+
+	avg = (float)waiting_times/(float)num_jobs;
+
+	return avg;
 }
 
 
