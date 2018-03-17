@@ -158,13 +158,17 @@ int priqueue_remove(priqueue_t *q, void *ptr)
 	else{
 		int index = 0;
 		int count = 0;
-		struct node* temp = q->head;
-		while(temp != NULL){
-			if(ptr == temp->data){
+		int tempData = *(int*)priqueue_at(q,index);
+		int ptrData = *(int*)ptr;
+		while(ptrData >= tempData){
+			if(ptrData == tempData){
 				priqueue_remove_at(q,index);
 				count++;
 			}
-			index++;
+			else{
+				index++;
+			}
+			tempData = *(int*)priqueue_at(q,index);
 		}
 		return count;
 	}
