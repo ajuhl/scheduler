@@ -147,7 +147,7 @@ void scheduler_start_up(int cores, scheme_t scheme)
 
 
 	finished_jobs = malloc(sizeof(priqueue_t));
-	priqueue_init(jobQ, compareSJF);
+//	priqueue_init(jobQ, compareSJF);
 	priqueue_init(finished_jobs, compareFCFS);
 
 }
@@ -203,11 +203,6 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 
 			return(i);
 		}
-	}
-
-	if(schemeType==PRI || schemeType==SJF)
-	{
-		new_job->processing = true;
 	}
 	//if core is not found, try to preemt one
 	if(schemeType==PPRI || schemeType==PSJF)
@@ -362,7 +357,7 @@ int scheduler_quantum_expired(int core_id, int time)
 		availCores_array[core_id]->current_job = NULL;
 		availCores_array[core_id]->current_job_id = -1;
 
-		prev_job->runningTime = prev_job->runningTime + (time - prev_job->last_scheduled);
+		prev_job->turnAroundTime = prev_job->turnAroundTime + (time - prev_job->last_scheduled);
 		prev_job->last_scheduled = time;
 
 		priqueue_offer(jobQ,prev_job);
