@@ -23,6 +23,7 @@ typedef struct _job_t
 	int latencyTime;
 	int runningTime;
 	int remainingTime;
+	int turnAroundTime;
 	int endTime;
 	bool processing;
 	int core_id;
@@ -183,6 +184,7 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 	new_job->priority = priority;
 	new_job->last_scheduled = -1;
 	new_job->first_scheduled = -1;
+	new_job->turnAroundTime = running_time;
 
 	//find core
 	for(int i=0; i<numOfCores; i++)//cycle through core array
@@ -203,6 +205,10 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 		}
 	}
 
+	if(schemeType==PRI || schemeType==SJF)
+	{
+		new_job->processing = true;
+	}
 	//if core is not found, try to preemt one
 	if(schemeType==PPRI || schemeType==PSJF)
 	{
@@ -211,7 +217,7 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 		for (int i=0;i<numOfCores;i++)
 		{
 			job_t* current = availCores_array[i]->current_job;
-			current->runningTime = current->runningTime - current->last_scheduled;
+			current->turnAroundTime = current->turnAroundTime + (time - current->last_scheduled);
 			current->last_scheduled = time;
 		}
 
@@ -249,7 +255,7 @@ int scheduler_new_job(int job_number, int time, int running_time, int priority)
 			new_job->core_id = lowest_priority_index;
 			new_job->last_scheduled=time;
 			new_job->first_scheduled=time;
-			new_job->arrivalTime=time;
+			//new_job->arrivalTime=time;
 			availCores_array[lowest_priority_index]->current_job_id = job_number;
 			return(lowest_priority_index);
 		}
@@ -289,7 +295,7 @@ int scheduler_job_finished(int core_id, int job_number, int time)
 
 	job_done->endTime = time;
 	job_done->core_id = -1; // done being scheduled
-	job_done->runningTime = (job_done->endTime)-(job_done->arrivalTime); //total time the job ran
+	job_done->turnAroundTime = (job_done->endTime)-(job_done->arrivalTime); //total time the job ran
 	job_done->last_scheduled = time;
 
 	priqueue_offer(finished_jobs, job_done);//add finished job to finished jobs queue

@@ -12,6 +12,10 @@ for $file (<examples/*>){
 		if($diff){
 			print "Test file $file differs\n$diff";
 		}
+		else
+		{
+			print "PASS $file\n";
+		}
 	}
 }
 #cleanup
